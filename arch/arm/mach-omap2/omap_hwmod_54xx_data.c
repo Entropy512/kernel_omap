@@ -1318,6 +1318,7 @@ static struct omap_hwmod omap54xx_dsp_c0_hwmod = {
 	.flags		= HWMOD_INIT_NO_RESET,
 	.rst_lines	= omap54xx_dsp_c0_resets,
 	.rst_lines_cnt	= ARRAY_SIZE(omap54xx_dsp_c0_resets),
+	.main_clk	= "dsp_fck",
 	.prcm = {
 		.omap4 = {
 			.rstctrl_offs = OMAP54XX_RM_DSP_RSTCTRL_OFFSET,
@@ -1334,7 +1335,7 @@ static struct omap_hwmod omap54xx_dsp_hwmod = {
 	.mpu_irqs	= omap54xx_dsp_irqs,
 	.rst_lines	= omap54xx_dsp_resets,
 	.rst_lines_cnt	= ARRAY_SIZE(omap54xx_dsp_resets),
-	.main_clk	= "dpll_iva_h11x2_ck",
+	.main_clk	= "dsp_fck",
 	.prcm = {
 		.omap4 = {
 			.clkctrl_offs = OMAP54XX_CM_DSP_DSP_CLKCTRL_OFFSET,
@@ -6195,14 +6196,14 @@ static struct omap_hwmod_ocp_if *omap54xx_usb_otg_ss_masters[] = {
 
 static struct omap_hwmod_addr_space omap54xx_usb_otg_ss_addrs[] = {
 	{
-		.name           = "dwc_usb3",
-		.pa_start       = 0x4a030000,
-		.pa_end         = 0x4a03ffff,
-		.flags          = ADDR_TYPE_RT
-	}, {
 		.name           = "wrapper",
 		.pa_start       = 0x4a020000,
 		.pa_end         = 0x4a02ffff,
+		.flags          = ADDR_TYPE_RT
+	}, {
+		.name           = "dwc_usb3",
+		.pa_start       = 0x4a030000,
+		.pa_end         = 0x4a03ffff,
 		.flags          = ADDR_TYPE_RT
 	},
 	{ }
@@ -6244,6 +6245,7 @@ static struct omap_hwmod omap54xx_usb_otg_ss_hwmod = {
 	.slaves_cnt	= ARRAY_SIZE(omap54xx_usb_otg_ss_slaves),
 	.masters	= omap54xx_usb_otg_ss_masters,
 	.masters_cnt	= ARRAY_SIZE(omap54xx_usb_otg_ss_masters),
+	.flags		= HWMOD_SWSUP_SIDLE,
 	.omap_chip	= OMAP_CHIP_INIT(CHIP_IS_OMAP54XX),
 };
 

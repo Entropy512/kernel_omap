@@ -35,6 +35,7 @@
 #include <linux/gpio.h>
 #include <linux/regulator/consumer.h>
 #include <linux/pm_runtime.h>
+#include <linux/pm_qos.h>
 #include <plat/dma.h>
 #include <mach/hardware.h>
 #include <plat/board.h>
@@ -167,6 +168,7 @@ struct omap_hsmmc_host {
 	struct	mmc_data	*data;
 	struct	clk		*fclk;
 	struct	clk		*dbclk;
+	struct pm_qos_request   pm_qos_request;
 	/*
 	 * vcc == configured supply
 	 * vcc_aux == optional
@@ -1750,6 +1752,9 @@ static void omap_hsmmc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	struct omap_hsmmc_host *host = mmc_priv(mmc);
 	int do_send_init_stream = 0;
 
+	if ((mmc_slot(host).features & HSMMC_DVFS) && (ios->clock))
+		pm_qos_update_request(&host->pm_qos_request, 540 * 1000);
+
 	pm_runtime_get_sync(host->dev);
 
 	if (ios->power_mode != host->power_mode) {
@@ -1884,6 +1889,7 @@ static int omap_start_signal_voltage_switch(struct mmc_host *mmc,
 	unsigned long notimeout = 0;
 
 	host  = mmc_priv(mmc);
+	pm_runtime_get_sync(host->dev);
 
 	if (ios->signal_voltage == MMC_SIGNAL_VOLTAGE_330) {
 		omap_hsmmc_conf_bus_power(host);
@@ -1892,6 +1898,7 @@ static int omap_start_signal_voltage_switch(struct mmc_host *mmc,
 		value &= ~OMAP_V1V8_SIGEN_V1V8;
 		OMAP_HSMMC_WRITE(host->base, AC12, value);
 		dev_dbg(mmc_dev(host->mmc), " i/o voltage switch to 3V\n");
+		pm_runtime_put_autosuspend(host->dev);
 		return 0;
 	}
 
@@ -1977,6 +1984,7 @@ static int omap_start_signal_voltage_switch(struct mmc_host *mmc,
 
 	value = OMAP_HSMMC_READ(host->base, CON);
 	OMAP_HSMMC_WRITE(host->base, CON, (value & ~(CLKEXTFREE | PADEN)));
+	pm_runtime_put_autosuspend(host->dev);
 
 	return 0;
 }
@@ -2094,8 +2102,6 @@ static int __init omap_hsmmc_probe(struct platform_device *pdev)
 	if (res == NULL || irq < 0)
 		return -ENXIO;
 
-	res->start += pdata->reg_offset;
-	res->end += pdata->reg_offset;
 	res = request_mem_region(res->start, resource_size(res), pdev->name);
 	if (res == NULL)
 		return -EBUSY;
@@ -2120,7 +2126,7 @@ static int __init omap_hsmmc_probe(struct platform_device *pdev)
 	host->irq	= irq;
 	host->id	= pdev->id;
 	host->slot_id	= 0;
-	host->mapbase	= res->start;
+	host->mapbase	= res->start + pdata->reg_offset;
 	host->base	= ioremap(host->mapbase, SZ_4K);
 	host->power_mode = MMC_POWER_OFF;
 	host->flags	= AUTO_CMD12;
@@ -2155,6 +2161,7 @@ static int __init omap_hsmmc_probe(struct platform_device *pdev)
 
 	mmc->caps |= MMC_CAP_DISABLE;
 
+	pm_qos_add_request(&host->pm_qos_request, PM_QOS_MEMORY_THROUGHPUT, 0);
 	pm_runtime_enable(host->dev);
 	pm_runtime_get_sync(host->dev);
 	pm_runtime_set_autosuspend_delay(host->dev, MMC_AUTOSUSPEND_DELAY);
@@ -2187,7 +2194,7 @@ static int __init omap_hsmmc_probe(struct platform_device *pdev)
 	mmc->max_seg_size = mmc->max_req_size;
 
 	mmc->caps |= MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED |
-		     MMC_CAP_WAIT_WHILE_BUSY | MMC_CAP_ERASE | MMC_CAP_CMD23;
+		     MMC_CAP_WAIT_WHILE_BUSY | MMC_CAP_ERASE;
 
 	mmc->caps |= mmc_slot(host).caps;
 	if (mmc->caps & MMC_CAP_8_BIT_DATA)
@@ -2339,6 +2346,7 @@ static int omap_hsmmc_remove(struct platform_device *pdev)
 
 		pm_runtime_put_sync(host->dev);
 		pm_runtime_disable(host->dev);
+		pm_qos_remove_request(&host->pm_qos_request);
 		clk_put(host->fclk);
 		if (host->got_dbclk) {
 			clk_disable(host->dbclk);
@@ -2458,6 +2466,8 @@ static int omap_hsmmc_runtime_suspend(struct device *dev)
 	host = platform_get_drvdata(to_platform_device(dev));
 	omap_hsmmc_context_save(host);
 	dev_dbg(mmc_dev(host->mmc), "disabled\n");
+	if ((mmc_slot(host).features & HSMMC_DVFS))
+		pm_qos_update_request(&host->pm_qos_request, 0);
 
 	return 0;
 }
@@ -2467,6 +2477,10 @@ static int omap_hsmmc_runtime_resume(struct device *dev)
 	struct omap_hsmmc_host *host;
 
 	host = platform_get_drvdata(to_platform_device(dev));
+
+	if ((mmc_slot(host).features & HSMMC_DVFS))
+		pm_qos_update_request(&host->pm_qos_request, 540 * 1000);
+
 	omap_hsmmc_context_restore(host);
 	dev_dbg(mmc_dev(host->mmc), "enabled\n");
 

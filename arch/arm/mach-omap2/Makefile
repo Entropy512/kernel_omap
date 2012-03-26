@@ -50,6 +50,7 @@ obj-$(CONFIG_SOC_OMAP2420)		+= mux2420.o
 obj-$(CONFIG_SOC_OMAP2430)		+= mux2430.o
 obj-$(CONFIG_ARCH_OMAP3)		+= mux34xx.o
 obj-$(CONFIG_ARCH_OMAP4)		+= mux44xx.o
+obj-$(CONFIG_ARCH_OMAP5)		+= mux54xx.o
 
 # SMS/SDRC
 obj-$(CONFIG_ARCH_OMAP2)		+= sdrc2xxx.o
@@ -295,8 +296,9 @@ obj-$(CONFIG_MACH_SBC3530)		+= board-omap3stalker.o \
 
 obj-$(CONFIG_MACH_TI8168EVM)		+= board-ti8168evm.o
 
-obj-$(CONFIG_MACH_OMAP_5430EVM)            += board-omap5evm.o \
-					      hsmmc.o
+obj-$(CONFIG_MACH_OMAP_5430EVM)		+= board-omap5evm.o \
+					   board-omap5evm-sensors.o \
+					   hsmmc.o
 
 # Platform specific device init code
 usbfs-$(CONFIG_ARCH_OMAP_OTG)		:= usb-fs.o

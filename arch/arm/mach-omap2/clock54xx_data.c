@@ -1186,6 +1186,15 @@ static struct clk dpll_usb_m2_ck = {
 	.set_rate	= &omap2_clksel_set_rate,
 };
 
+static struct clk dsp_fck = {
+	.name		= "dsp_fck",
+	.ops		= &clkops_omap2_dflt,
+	.enable_reg	= OMAP54XX_CM_DSP_DSP_CLKCTRL,
+	.clkdm_name	= "dsp_clkdm",
+	.parent		= &dpll_iva_h11x2_ck,
+	.recalc		= &followparent_recalc,
+};
+
 static struct clk func_12m_fclk = {
 	.name		= "func_12m_fclk",
 	.parent		= &dpll_per_m2x2_ck,
@@ -2100,8 +2109,6 @@ static struct clk usb_tll_hs_usb_ch2_clk = {
 static struct clk usb_host_hs_fck = {
 	.name		= "usb_host_hs_fck",
 	.ops		= &clkops_omap2_dflt,
-	.enable_reg	= OMAP54XX_CM_L3INIT_USB_HOST_HS_CLKCTRL,
-	.enable_bit	= OMAP54XX_MODULEMODE_SWCTRL,
 	.clkdm_name	= "l3init_clkdm",
 	.parent		= &l3init_60m_fclk,
 	.recalc		= &followparent_recalc,
@@ -2110,8 +2117,6 @@ static struct clk usb_host_hs_fck = {
 static struct clk usb_tll_hs_ick = {
 	.name		= "usb_tll_hs_ick",
 	.ops		= &clkops_omap2_dflt,
-	.enable_reg	= OMAP54XX_CM_L3INIT_USB_TLL_HS_CLKCTRL,
-	.enable_bit	= OMAP54XX_MODULEMODE_HWCTRL,
 	.clkdm_name	= "l3init_clkdm",
 	.parent		= &l4_div_ck,
 	.recalc		= &followparent_recalc,
@@ -2535,6 +2540,7 @@ static struct omap_clk omap54xx_clks[] = {
 	CLK(NULL,	"dpll_usb_ck",			&dpll_usb_ck,	CK_54XX),
 	CLK(NULL,	"dpll_usb_clkdcoldo_ck",	&dpll_usb_clkdcoldo_ck,	CK_54XX),
 	CLK(NULL,	"dpll_usb_m2_ck",		&dpll_usb_m2_ck,	CK_54XX),
+	CLK(NULL,	"dsp_fck",			&dsp_fck,	CK_54XX),
 	CLK(NULL,	"func_12m_fclk",		&func_12m_fclk,	CK_54XX),
 	CLK(NULL,	"func_24m_fclk",		&func_24m_fclk,	CK_54XX),
 	CLK(NULL,	"func_48m_fclk",		&func_48m_fclk,	CK_54XX),

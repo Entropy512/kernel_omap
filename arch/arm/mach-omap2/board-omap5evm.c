@@ -17,8 +17,6 @@
 #include <linux/io.h>
 #include <linux/gpio.h>
 #include <linux/hwspinlock.h>
-#include <linux/i2c/tsl2771.h>
-#include <linux/input/mpu6050.h>
 
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
@@ -57,6 +55,7 @@
 #include <video/omap-panel-lg4591.h>
 
 #include "common-board-devices.h"
+#include "board-omap5evm.h"
 
 #define OMAP5_TOUCH_IRQ_1              179
 #define OMAP5_TOUCH_RESET              230
@@ -69,7 +68,8 @@
 #define PHYS_ADDR_SMC_SIZE	(SZ_1M * 3)
 #define PHYS_ADDR_SMC_MEM	(0x80000000 + SZ_1G - PHYS_ADDR_SMC_SIZE)
 #define OMAP_ION_HEAP_SECURE_INPUT_SIZE	(SZ_1M * 90)
-#define PHYS_ADDR_DUCATI_SIZE	(SZ_1M * 105)
+#define OMAP_ION_HEAP_TILER_SIZE	(SZ_128M - SZ_32M)
+#define PHYS_ADDR_DUCATI_SIZE	(SZ_1M * 165)
 #define PHYS_ADDR_DUCATI_MEM	(PHYS_ADDR_SMC_MEM - PHYS_ADDR_DUCATI_SIZE - \
 					OMAP_ION_HEAP_SECURE_INPUT_SIZE)
 
@@ -81,6 +81,14 @@
 #define OMAP5_ION_HEAP_TILER_SIZE	(SZ_128M - SZ_32M - \
 					OMAP5_ION_HEAP_NONSECURE_TILER_SIZE)
 #endif
+
+#ifdef CONFIG_OMAP_REMOTE_PROC_DSP
+#define PHYS_ADDR_TESLA_SIZE	(SZ_1M * 4)
+#define PHYS_ADDR_TESLA_MEM	(PHYS_ADDR_DUCATI_MEM - \
+					OMAP_ION_HEAP_TILER_SIZE - \
+					PHYS_ADDR_TESLA_SIZE)
+#endif
+
 #define GPIO_WIFI_PMENA			140
 #define GPIO_WIFI_IRQ			9
 
@@ -171,54 +179,6 @@ static struct omap4_keypad_platform_data evm5430_keypad_data = {
 
 static struct omap_board_data keypad_data = {
 	.id                     = 1,
-};
-
-static struct mpu6050_platform_data mpu6050_platform_data = {
-	.aux_i2c_supply = 0,
-	.sample_rate_div = 0,
-	.config = 0,
-	.fifo_mode = 0,
-	.mpu6050_accel = {
-			.x_axis = 2,
-			.y_axis = 2,
-			.z_axis = 2,
-			.fsr = 0,               /* FSR to  -2g */
-			.hpf = 4,               /* HPF ON and cut off 0.63HZ */
-			.ctrl_mode = 2,         /* ZERO MOTION DETECTION */
-			.mode_thr_val = 0,      /* Threshold val */
-			.mode_thr_dur = 0,      /* Threshold duration */
-			.irqflags = IRQF_TRIGGER_HIGH,
-	},
-	.mpu6050_gyro = {
-			.x_axis = 2,
-			.y_axis = 2,
-			.z_axis = 2,
-			.fsr = 0,
-			.config = 0,
-	},
-};
-
-struct tsl2771_platform_data tsl2771_data = {
-	.irq_flags      = (IRQF_TRIGGER_LOW | IRQF_ONESHOT),
-	.flags          = (TSL2771_USE_ALS | TSL2771_USE_PROX),
-	.def_enable                     = 0x0,
-	.als_adc_time                   = 0xdb,
-	.prox_adc_time                  = 0xff,
-	.wait_time                      = 0x00,
-	.als_low_thresh_low_byte        = 0x0,
-	.als_low_thresh_high_byte       = 0x0,
-	.als_high_thresh_low_byte       = 0x0,
-	.als_high_thresh_high_byte      = 0x0,
-	.prox_low_thresh_low_byte       = 0x0,
-	.prox_low_thresh_high_byte      = 0x0,
-	.prox_high_thresh_low_byte      = 0x0,
-	.prox_high_thresh_high_byte     = 0x0,
-	.interrupt_persistence          = 0xf6,
-	.config                         = 0x00,
-	.prox_pulse_count               = 0x03,
-	.gain_control                   = 0xE0,
-	.glass_attn                     = 0x01,
-	.device_factor                  = 0x34,
 };
 
 static uint32_t board_keymap[] = {
@@ -1043,10 +1003,10 @@ static struct qtouch_ts_platform_data atmel_mxt224_ts_platform_data = {
 	.power_cfg      = {
 		.idle_acq_int   = 0xff,
 		.active_acq_int = 0xff,
-		.active_idle_to = 0x42,
+		.active_idle_to = 0x0a,
 	},
 	.acquire_cfg    = {
-		.charge_time    = 0x0a,
+		.charge_time    = 0x7,
 		.atouch_drift   = 0x05,
 		.touch_drift    = 0x14,
 		.drift_susp     = 0x14,
@@ -1062,11 +1022,11 @@ static struct qtouch_ts_platform_data atmel_mxt224_ts_platform_data = {
 		.x_size         = 0x12,
 		.y_size         = 0x0c,
 		.aks_cfg        = 0x0,
-		.burst_len      = 0x01,
-		.tch_det_thr    = 0x1D,
+		.burst_len      = 0x14,
+		.tch_det_thr    = 0x28,
 		.tch_det_int    = 0x2,
-		.mov_hyst_init  = 0x63,
-		.mov_hyst_next  = 0x63,
+		.mov_hyst_init  = 0xa,
+		.mov_hyst_next  = 0xa,
 		.mov_filter     = 0x00,
 		.num_touch      = 10,
 		.orient         = 0x00,
@@ -1098,8 +1058,8 @@ static struct qtouch_ts_platform_data atmel_mxt224_ts_platform_data = {
 		.yhigrip        = 0x00,
 		.maxtchs        = 0x00,
 		.reserve0       = 0x00,
-		.szthr1         = 0x00,
-		.szthr2         = 0x00,
+		.szthr1         = 0x0,
+		.szthr2         = 0x0,
 		.shpthr1        = 0x00,
 		.shpthr2        = 0x00,
 		.supextto       = 0x00,
@@ -1110,14 +1070,14 @@ static struct qtouch_ts_platform_data atmel_mxt224_ts_platform_data = {
 		.gcaf_upper_limit = 0x0019,
 		.gcaf_lower_limit = 0xffe7,
 		.gcaf_valid     = 0x04,
-		.noise_thresh   = 0x32,
+		.noise_thresh   = 0x14,
 		.reserved1      = 0x00,
-		.freq_hop_scale = 0x01,
-		.burst_freq_0   = 0x0a,
-		.burst_freq_1 = 0x0f,
-		.burst_freq_2 = 0x04,
-		.burst_freq_3 = 0x19,
-		.burst_freq_4 = 0x1e,
+		.freq_hop_scale = 0x00,
+		.burst_freq_0   = 0x00,
+		.burst_freq_1 = 0x07,
+		.burst_freq_2 = 0x0c,
+		.burst_freq_3 = 0x11,
+		.burst_freq_4 = 0x14,
 		.num_of_gcaf_samples = 0x04,
 	},
 	.touch_proximity_cfg = {
@@ -1194,24 +1154,8 @@ static struct qtouch_ts_platform_data atmel_mxt224_ts_platform_data = {
 		.ctrl = 0x00,
 		.command = 0x00,
 		.mode = 0x02,
-		.gcaf_idle_mode = 0x04,
-		.gcaf_actv_mode = 0x08,
-	},
-};
-
-static struct i2c_board_info __initdata omap5evm_i2c_2_boardinfo[] = {
-	{
-		I2C_BOARD_INFO("bmp085", 0x77),
-	},
-	{
-		I2C_BOARD_INFO("tsl2771", 0x39),
-		.platform_data = &tsl2771_data,
-		.irq = OMAP5_TSL2771_INT_GPIO,
-	},
-	{
-		I2C_BOARD_INFO("mpu6050", 0x68),
-		.platform_data = &mpu6050_platform_data,
-		.irq = OMAP5_MPU6050_INT_GPIO,
+		.gcaf_idle_mode = 0x20,
+		.gcaf_actv_mode = 0x20,
 	},
 };
 
@@ -1220,9 +1164,6 @@ static struct i2c_board_info __initdata omap5evm_i2c_4_boardinfo[] = {
 		I2C_BOARD_INFO(QTOUCH_TS_NAME, 0x4a),
 		.platform_data = &atmel_mxt224_ts_platform_data,
 		.irq = OMAP_GPIO_IRQ(OMAP5_TOUCH_IRQ_1),
-	},
-	{
-		I2C_BOARD_INFO("tmp102", 0x48),
 	},
 };
 
@@ -1256,8 +1197,7 @@ static int __init omap_5430evm_i2c_init(void)
 #else
 	omap_register_i2c_bus(1, 400, NULL, 0);
 #endif
-	omap_register_i2c_bus(2, 400, omap5evm_i2c_2_boardinfo,
-				ARRAY_SIZE(omap5evm_i2c_2_boardinfo));
+	omap_register_i2c_bus(2, 400, NULL, 0);
 	omap_register_i2c_bus(3, 400, NULL, 0);
 	omap_register_i2c_bus(4, 400, omap5evm_i2c_4_boardinfo,
 				ARRAY_SIZE(omap5evm_i2c_4_boardinfo));
@@ -1555,6 +1495,13 @@ static struct omap_dss_board_info omap5evm_dss_data = {
 	.devices	= omap5evm_dss_devices,
 	.default_device	= &omap5evm_lcd_device,
 };
+#ifdef CONFIG_OMAP_MUX
+static struct omap_board_mux board_mux[] __initdata = {
+	{ .reg_offset = OMAP_MUX_TERMINATOR },
+};
+#else
+#define board_mux NULL
+#endif
 
 static void omap_5430evm_bluetooth_init(void)
 {
@@ -1582,14 +1529,16 @@ static void __init omap_5430evm_init(void)
 			&lpddr2_elpida_S4_min_tck,
 			&custom_configs);
 #endif
-
+	omap5_mux_init(board_mux, NULL, OMAP_PACKAGE_CBL);
 	omap5evm_touch_init();
 	omap_5430evm_i2c_init();
 #ifdef CONFIG_TI_ST
 	platform_add_devices(wl18xx_devices, ARRAY_SIZE(wl18xx_devices));
 #endif
 	omap_5430evm_bluetooth_init();
-	omap_serial_init();
+	omap5evm_sensor_init();
+	omap_serial_board_init(NULL, 2);
+	omap_serial_board_init(NULL, 4);
 	platform_device_register(&dummy_sd_regulator_device);
 
 	omap5_sdp5430_wifi_init();
@@ -1622,6 +1571,11 @@ static void __init omap_5430evm_reserve(void)
 	/* ipu needs to recognize secure input buffer area as well */
 	omap_ipu_set_static_mempool(PHYS_ADDR_DUCATI_MEM,
 		PHYS_ADDR_DUCATI_SIZE + OMAP_ION_HEAP_SECURE_INPUT_SIZE);
+#ifdef CONFIG_OMAP_REMOTE_PROC_DSP
+	memblock_remove(PHYS_ADDR_TESLA_MEM, PHYS_ADDR_TESLA_SIZE);
+	omap_dsp_set_static_mempool(PHYS_ADDR_TESLA_MEM,
+					PHYS_ADDR_TESLA_SIZE);
+#endif
 
 #ifdef CONFIG_ION_OMAP
 	omap_ion_init();

@@ -535,11 +535,11 @@ static ssize_t dwc3_testmode_write(struct file *file,
 		testmode = TEST_J;
 	else if (!strncmp(buf, "test_k", 6))
 		testmode = TEST_K;
-	else if (!strncmp(buf, "test_se0_nak", 13))
+	else if (!strncmp(buf, "test_se0_nak", 12))
 		testmode = TEST_SE0_NAK;
-	else if (!strncmp(buf, "test_packet", 12))
+	else if (!strncmp(buf, "test_packet", 11))
 		testmode = TEST_PACKET;
-	else if (!strncmp(buf, "test_force_enable", 18))
+	else if (!strncmp(buf, "test_force_enable", 17))
 		testmode = TEST_FORCE_EN;
 	else
 		testmode = 0;
@@ -669,8 +669,8 @@ int __devinit dwc3_debugfs_init(struct dwc3 *dwc)
 	int			ret;
 
 	root = debugfs_create_dir(dev_name(dwc->dev), NULL);
-	if (IS_ERR(root)) {
-		ret = PTR_ERR(root);
+	if (!root) {
+		ret = -ENOMEM;
 		goto err0;
 	}
 
@@ -678,29 +678,29 @@ int __devinit dwc3_debugfs_init(struct dwc3 *dwc)
 
 	file = debugfs_create_file("regdump", S_IRUGO, root, dwc,
 			&dwc3_regdump_fops);
-	if (IS_ERR(file)) {
-		ret = PTR_ERR(file);
+	if (!file) {
+		ret = -ENOMEM;
 		goto err1;
 	}
 
 	file = debugfs_create_file("mode", S_IRUGO | S_IWUSR, root,
 			dwc, &dwc3_mode_fops);
-	if (IS_ERR(file)) {
-		ret = PTR_ERR(file);
+	if (!file) {
+		ret = -ENOMEM;
 		goto err1;
 	}
 
 	file = debugfs_create_file("testmode", S_IRUGO | S_IWUSR, root,
 			dwc, &dwc3_testmode_fops);
-	if (IS_ERR(file)) {
-		ret = PTR_ERR(file);
+	if (!file) {
+		ret = -ENOMEM;
 		goto err1;
 	}
 
 	file = debugfs_create_file("link_state", S_IRUGO | S_IWUSR, root,
 			dwc, &dwc3_link_state_fops);
-	if (IS_ERR(file)) {
-		ret = PTR_ERR(file);
+	if (!file) {
+		ret = -ENOMEM;
 		goto err1;
 	}
 
