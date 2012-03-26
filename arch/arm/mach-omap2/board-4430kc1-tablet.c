@@ -22,26 +22,16 @@
 #include <linux/gpio.h>
 #include <linux/usb/otg.h>
 #include <linux/spi/spi.h>
-// #include <linux/hwspinlock.h>
+#include <linux/hwspinlock.h>
 #include <linux/i2c/twl.h>
-#include <linux/leds-omap4430sdp-display.h>
-#include <linux/interrupt.h>
-#include <linux/delay.h>
-#include <linux/twl6040-vib.h>
+#include <linux/mfd/twl6040.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
-#include <linux/omapfb.h>
-#include <linux/wl12xx.h>
-#include <linux/skbuff.h>
-#include <linux/reboot.h>
-#include <linux/ti_wilink_st.h>
-#include <linux/bootmem.h>
-#include <plat/omap-serial.h>
 #include <linux/memblock.h>
+
 #include <mach/hardware.h>
 #include <mach/omap4-common.h>
-#include <mach/emif.h>
-#include <mach/lpddr2-elpida.h>
+#include <asm/hardware/gic.h>
 #include <mach/dmm.h>
 
 #include <asm/mach-types.h>
@@ -52,28 +42,20 @@
 #include <plat/common.h>
 #include <plat/usb.h>
 #include <plat/mmc.h>
-#include <plat/omap_device.h>
-#include <plat/omap_hwmod.h>
-#include <plat/omap_apps_brd_id.h>
-#include <plat/omap-serial.h>
-#include <linux/wakelock.h>
 #include <plat/remoteproc.h>
 #include <video/omapdss.h>
-#include <plat/vram.h>
+#include <linux/wl12xx.h>
+
+#include <linux/reboot.h>
 #include <plat/omap-pm.h>
 
-#include <plat/dmtimer.h>
-
-#include "common-board-devices.h"
 #include "mux.h"
 #include "hsmmc.h"
-#include "timer-gp.h"
 #include "control.h"
+#include "common-board-devices.h"
 #include "pm.h"
 #include "prm-regbits-44xx.h"
 #include "prm44xx.h"
-#include "omap4_ion.h"
-#include "voltage.h"
 
 #include "board-4430kc1-tablet.h"
 
@@ -107,6 +89,23 @@
 #define TOUCHID1_GPIO			51
 
 #define TWL6030_RTC_GPIO		6
+
+#define PHYS_ADDR_SMC_SIZE	(SZ_1M * 3)
+#define PHYS_ADDR_SMC_MEM	(0x80000000 + SZ_1G - PHYS_ADDR_SMC_SIZE)
+
+#define OMAP_ION_HEAP_SECURE_INPUT_SIZE	(SZ_1M * 90)
+#define OMAP_ION_HEAP_TILER_SIZE	(SZ_128M - SZ_32M)
+
+#define PHYS_ADDR_DUCATI_SIZE	(SZ_1M * 105)
+#define PHYS_ADDR_DUCATI_MEM	(PHYS_ADDR_SMC_MEM - PHYS_ADDR_DUCATI_SIZE - \
+				OMAP_ION_HEAP_SECURE_INPUT_SIZE)
+
+#ifdef CONFIG_OMAP_REMOTE_PROC_DSP
+#define PHYS_ADDR_TESLA_SIZE	(SZ_1M * 4)
+#define PHYS_ADDR_TESLA_MEM	(PHYS_ADDR_DUCATI_MEM - \
+					OMAP_ION_HEAP_TILER_SIZE - \
+					PHYS_ADDR_TESLA_SIZE)
+#endif
 
 static struct wake_lock uart_lock;
 
@@ -193,9 +192,6 @@ static void __init omap_4430sdp_init_early(void)
 {
 	omap2_init_common_infrastructure();
 	omap2_init_common_devices(NULL, NULL);
-#ifdef CONFIG_OMAP_32K_TIMER
-	omap2_gp_clockevent_set_gptimer(1);
-#endif
 }
 
 static struct omap_musb_board_data musb_board_data = {
@@ -364,22 +360,22 @@ static int __init omap4_twl6030_hsmmc_init(struct omap2_hsmmc_info *controllers)
 /***** I2C BOARD INIT ****/
 
 static struct i2c_board_info __initdata sdp4430_i2c_boardinfo_dvt[] = {
-#ifdef CONFIG_BATTERY_BQ27541_Q
+#ifdef CONFIG_BATTERY_BQ27x00
 	{
-		I2C_BOARD_INFO("bq27541", 0x55),
+		I2C_BOARD_INFO("bq27000-battery", 0x55),
 	},
 #endif
 };
 
 static struct i2c_board_info __initdata sdp4430_i2c_boardinfo[] = {
-#ifdef CONFIG_BATTERY_BQ27541_Q
+#ifdef CONFIG_BATTERY_BQ27x00
 	{
-		I2C_BOARD_INFO("bq27541", 0x55),
+		I2C_BOARD_INFO("bq27000-battery", 0x55),
 	},
 #endif
-#ifdef CONFIG_SUMMIT_SMB347_Q
+#ifdef CONFIG_CHARGER_SMB347
 	{
-		I2C_BOARD_INFO("summit_smb347", 0x6),
+		I2C_BOARD_INFO("smb347", 0x6),
 		.irq = OMAP_GPIO_IRQ(OMAP4_CHARGER_IRQ),
 	},
 #endif    
@@ -428,8 +424,8 @@ static struct i2c_board_info __initdata sdp4430_i2c_4_boardinfo_c1c[] = {
 };
 
 static struct i2c_board_info __initdata sdp4430_i2c_4_boardinfo_dvt[] = {
-#ifdef CONFIG_SUMMIT_SMB347_Q
-	{ I2C_BOARD_INFO("summit_smb347", 0x6), .irq = OMAP_GPIO_IRQ(OMAP4_CHARGER_IRQ), },
+#ifdef CONFIG_CHARGER_SMB347
+	{ I2C_BOARD_INFO("smb347", 0x6), .irq = OMAP_GPIO_IRQ(OMAP4_CHARGER_IRQ), },
 #endif    
 /* Added for STK ALS*/
 	{ I2C_BOARD_INFO("stk_als22x7_addr1", 0x20>>1), },
@@ -444,8 +440,8 @@ static struct i2c_board_info __initdata sdp4430_i2c_4_boardinfo_dvt[] = {
 };
 
 static struct i2c_board_info __initdata sdp4430_i2c_4_boardinfo_pvt[] = {
-#ifdef CONFIG_SUMMIT_SMB347_Q
-	{ I2C_BOARD_INFO("summit_smb347", 0x6), .irq = OMAP_GPIO_IRQ(OMAP4_CHARGER_IRQ), },
+#ifdef CONFIG_CHARGER_SMB347
+	{ I2C_BOARD_INFO("smb347", 0x6), .irq = OMAP_GPIO_IRQ(OMAP4_CHARGER_IRQ), },
 #endif    
 /* Added for STK ALS*/
 	{ I2C_BOARD_INFO("stk_als22x7_addr1", 0x20>>1), },
@@ -479,15 +475,6 @@ static void __init omap_i2c_hwspinlock_init(int bus_id, unsigned int spinlock_id
 	} else {
 		pr_err("I2C hwspinlock request failed for bus %d\n", bus_id);
 	}
-}
-
-static void otter_set_osc_timings(void)
-{
-	/* Device Oscilator
-	 * tstart = 2ms + 2ms = 4ms.
-	 * tshut = Not defined in oscillator data sheet so setting to 1us
-	 */
-	omap_pm_set_osc_lp_time(4000, 1);
 }
 
 static int __init omap4_i2c_init(void)
@@ -629,23 +616,6 @@ static struct omap_board_mux __initdata board_mux[] = {
 #define board_mux	NULL
 #endif
 
-/*
- * LPDDR2 Configeration Data:
- * The memory organisation is as below :
- *	EMIF1 - CS0 -	2 Gb
- *		CS1 -	2 Gb
- *	EMIF2 - CS0 -	2 Gb
- *		CS1 -	2 Gb
- *	--------------------
- *	TOTAL -		8 Gb
- *
- * Same devices installed on EMIF1 and EMIF2
- */
-static struct emif_device_details __initdata emif_devices = {
-	.cs0_device = &lpddr2_elpida_2G_S4_dev,
-	// .cs1_device = &lpddr2_elpida_2G_S4_dev
-};
-
 static void enable_rtc_gpio(void){
 	/* To access twl registers we enable gpio6
 	 * we need this so the RTC driver can work.
@@ -763,9 +733,32 @@ static struct notifier_block kc1_reboot_notifier = {
 	.notifier_call = kc1_notifier_call,
 };
 
+static struct __initdata emif_custom_configs custom_configs = {
+	.mask   = EMIF_CUSTOM_CONFIG_LPMODE,
+	.lpmode = EMIF_LP_MODE_DISABLE
+};
+
 static void __init omap_kc1_init(void)
 {
+	int status;
 	int package = OMAP_PACKAGE_CBS;
+
+	if (omap_rev() == OMAP4430_REV_ES1_0)
+		package = OMAP_PACKAGE_CBL;
+
+	omap_emif_set_device_details(1, &lpddr2_elpida_2G_S4_x2_info,
+			lpddr2_elpida_2G_S4_timings,
+			ARRAY_SIZE(lpddr2_elpida_2G_S4_timings),
+			&lpddr2_elpida_S4_min_tck,
+			&custom_configs);
+
+#if 0
+	omap_emif_set_device_details(2, &lpddr2_elpida_2G_S4_x2_info,
+			lpddr2_elpida_2G_S4_timings,
+			ARRAY_SIZE(lpddr2_elpida_2G_S4_timings),
+			&lpddr2_elpida_S4_min_tck,
+			&custom_configs);
+#endif
 
 	quanta_boardids();
 	if (omap_rev() == OMAP4430_REV_ES1_0)
@@ -773,24 +766,18 @@ static void __init omap_kc1_init(void)
 
 	omap4_mux_init(board_mux, NULL, package);
 
-	omap_emif_setup_device_details(&emif_devices, &emif_devices);
-
 	omap_board_config = sdp4430_config;
 	omap_board_config_size = ARRAY_SIZE(sdp4430_config);
 
-	omap_init_board_version(0);
-
-	omap4_create_board_props();
 //	register_reboot_notifier(&kc1_reboot_notifier);
 
-	otter_set_osc_timings();
 	omap4_i2c_init();
 	enable_rtc_gpio();
 	omap_dmm_init();
 
 	omap4_display_init();
 
-	omap4_register_ion();
+//	omap4_register_ion();
 	platform_add_devices(sdp4430_devices, ARRAY_SIZE(sdp4430_devices));
 
 	gpio_request(0, "sysok");
@@ -859,14 +846,14 @@ static void __init omap_4430sdp_reserve(void)
 	memblock_remove(PHYS_ADDR_SMC_MEM, PHYS_ADDR_SMC_SIZE);
 	memblock_remove(PHYS_ADDR_DUCATI_MEM, PHYS_ADDR_DUCATI_SIZE);
 	/* ipu needs to recognize secure input buffer area as well */
-	omap_ipu_set_static_mempool(PHYS_ADDR_DUCATI_MEM, PHYS_ADDR_DUCATI_SIZE + OMAP4_ION_HEAP_SECURE_INPUT_SIZE);
+	omap_ipu_set_static_mempool(PHYS_ADDR_DUCATI_MEM, PHYS_ADDR_DUCATI_SIZE + OMAP_ION_HEAP_SECURE_INPUT_SIZE);
 #ifdef CONFIG_OMAP_REMOTE_PROC_DSP
 	memblock_remove(PHYS_ADDR_TESLA_MEM, PHYS_ADDR_TESLA_SIZE);
 	omap_dsp_set_static_mempool(PHYS_ADDR_TESLA_MEM, PHYS_ADDR_TESLA_SIZE);
 #endif
 
 #ifdef CONFIG_ION_OMAP
-	omap_ion_init();
+//	omap_ion_init();
 #endif
 	omap_reserve();
 }
@@ -877,6 +864,7 @@ MACHINE_START(OMAP_4430SDP, "OMAP4430")
 	.map_io		= omap_4430sdp_map_io,
 	.init_early	= omap_4430sdp_init_early,
 	.init_irq	= gic_init_irq,
+	.handle_irq	= gic_handle_irq,
 	.init_machine	= omap_kc1_init,
-	.timer		= &omap_timer,
+	.timer		= &omap4_timer,
 MACHINE_END

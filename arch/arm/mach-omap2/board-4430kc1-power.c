@@ -197,9 +197,11 @@ static struct twl4030_madc_platform_data sdp4430_gpadc_data = {
 };
 
 #define SUMMIT_STAT 31
+#if 0
 static struct twl6030_qcharger_platform_data kc1_charger_data={
         .interrupt_pin = OMAP4_CHARGER_IRQ,
 };
+#endif
 
 static struct regulator_init_data sdp4430_clk32kg = {
 	.constraints = {
@@ -209,6 +211,7 @@ static struct regulator_init_data sdp4430_clk32kg = {
 	},
 };
 
+#if 0
 static struct regulator_init_data sdp4430_clk32kaudio = {
 	.constraints = {
 		.valid_modes_mask	= REGULATOR_MODE_NORMAL,
@@ -227,6 +230,7 @@ static struct regulator_init_data sdp4430_v2v1 = {
 		.initial_state		= PM_SUSPEND_MEM,
 	},
 };
+#endif
 
 static struct regulator_init_data sdp4430_vcore1	= {
 	.constraints = {
@@ -257,6 +261,7 @@ static struct twl4030_usb_data omap4_usbphy_data = {
 	.phy_suspend	= omap4430_phy_suspend,
 };
 
+#if 0
 static struct twl4030_platform_data sdp4430_twldata = {
 	.irq_base	= TWL6030_IRQ_BASE,
 	.irq_end	= TWL6030_IRQ_END,
@@ -275,14 +280,14 @@ static struct twl4030_platform_data sdp4430_twldata = {
 
 	/* TWL6030/6032 common resources */
 	.clk32kg	= &sdp4430_clk32kg,
-	.clk32kaudio	= &sdp4430_clk32kaudio,
+//	.clk32kaudio	= &sdp4430_clk32kaudio,
 
 //	.qcharger	= &kc1_charger_data,
 
 	/* SMPS */
 	.vdd1		= &sdp4430_vcore1,
 	.vdd2		= &sdp4430_vcore2,
-	.v2v1		= &sdp4430_v2v1,
+//	.v2v1		= &sdp4430_v2v1,
 
 	/* children */
 //	.bci            = &sdp4430_bci_data,
@@ -290,9 +295,35 @@ static struct twl4030_platform_data sdp4430_twldata = {
 //	.codec          = &twl6040_codec,
 	.madc           = &sdp4430_gpadc_data,
 };
+#endif
+
+#if 0
+static struct twl6040_platform_data twl6040_data = {
+	// .codec		= &twl6040_codec,
+	// .vibra		= &twl6040_vibra,
+	// .audpwron_gpio	= 127,
+	// .irq_base	= TWL6040_CODEC_IRQ_BASE,
+};
+#endif
+
+static struct twl4030_platform_data sdp4430_twldata = {
+	/* Regulators */
+	.vusim		= &sdp4430_vusim,
+	.vaux1		= &sdp4430_vaux1,
+};
 
 void __init omap4_power_init(void)
 {
-	omap4_pmic_init("twl6030", &sdp4430_twldata);
+	omap4_pmic_get_config(&sdp4430_twldata, TWL_COMMON_PDATA_USB,
+			TWL_COMMON_REGULATOR_VDAC |
+			TWL_COMMON_REGULATOR_VAUX2 |
+			TWL_COMMON_REGULATOR_VAUX3 |
+			TWL_COMMON_REGULATOR_VMMC |
+			TWL_COMMON_REGULATOR_VPP |
+			TWL_COMMON_REGULATOR_VANA |
+			TWL_COMMON_REGULATOR_VCXIO |
+			TWL_COMMON_REGULATOR_VUSB |
+			TWL_COMMON_REGULATOR_CLK32KG);
+	omap4_pmic_init("twl6030", &sdp4430_twldata, NULL, OMAP44XX_IRQ_SYS_2N);
 }
 

@@ -22,7 +22,7 @@
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
-#include <linux/leds-omap4430sdp-display.h>
+// #include <linux/leds-omap4430sdp-display.h>
 #include <linux/platform_device.h>
 #include <linux/omapfb.h>
 #include <video/omapdss.h>
@@ -31,7 +31,7 @@
 #include <linux/i2c/twl.h>
 
 #include <plat/vram.h>
-#include <plat/omap_apps_brd_id.h>
+// #include <plat/omap_apps_brd_id.h>
 #include <plat/dmtimer.h>
 
 #include "board-4430kc1-tablet.h"
@@ -73,11 +73,13 @@ static void sdp4430_set_primary_brightness(u8 brightness)
 	}
 }
 
+#if 0
 static struct omap4430_sdp_disp_led_platform_data sdp4430_disp_led_data __initdata = {
 	.flags = LEDS_CTRL_AS_ONE_DISPLAY,
 	.display_led_init = sdp4430_init_display_led,
 	.primary_display_set = sdp4430_set_primary_brightness,
 };
+#endif
 
 #if 0
 void omap4_disp_led_init(void)
