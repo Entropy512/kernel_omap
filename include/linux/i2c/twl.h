@@ -173,6 +173,12 @@ TWL_CLASS_IS(6030, TWL6030_CLASS_ID)
 
 #define TWL6025_SUBCLASS	BIT(4)  /* TWL6025 has changed registers */
 
+/* Added by Hashcode from L27.13.1-Beta Kernel */
+/* TWL6030 control interface  registers */
+#define TWL6030_TOGGLE1			0x90
+#define TWL6030_TOGGLE2			0x91
+#define TWL6030_TOGGLE3			0x92
+
 /*
  * Read and write single 8-bit registers
  */
@@ -231,6 +237,12 @@ static inline int twl6030_mmc_card_detect(struct device *dev, int slot)
 #define TWL4030_SIH_CTRL_COR_MASK	BIT(2)
 
 /*----------------------------------------------------------------------*/
+
+/*
+* PMC Master Module offser
+*/
+#define REG_START_CONDITION         0x0
+#define REG_STS_HW_CONDITIONS       0x2
 
 /*
  * GPIO Block Register offsets (use TWL4030_MODULE_GPIO)

@@ -336,6 +336,14 @@ config MACH_OMAP_4430SDP
 	select REGULATOR_FIXED_VOLTAGE
 	select OMAP_TPS6236X
 
+config MACH_OMAP_4430_KC1
+	bool "OMAP 4430 KC1 board"
+	depends on ARCH_OMAP4
+	select OMAP_PACKAGE_CBL
+	select OMAP_PACKAGE_CBS
+        select TOUCHSCREEN_ILITEK
+	select REGULATOR_FIXED_VOLTAGE
+
 config MACH_OMAP4_PANDA
 	bool "OMAP4 Panda Board"
 	default y

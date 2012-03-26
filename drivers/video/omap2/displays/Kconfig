@@ -79,4 +79,11 @@ config PANEL_N8X0
 	depends on BACKLIGHT_CLASS_DEVICE
 	help
 	  This is the LCD panel used on Nokia N8x0
+
+config PANEL_OTTER1
+        tristate "Amazon Kindle Fire (Otter) Panel"
+        depends on OMAP2_DSS
+        help
+          LCD Panel used in KC1 
+
 endmenu
