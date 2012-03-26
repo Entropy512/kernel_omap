@@ -19,7 +19,12 @@
 
 #define OMAP4_CHARGER_IRQ		7
 
+#define FIXED_REG_V2V1_ID 1
+#define FIXED_REG_V1V8_ID 2
+#define FIXED_REG_VBAT_ID 3
+
 void omap4_power_init(void);
+void omap4_power_devices(void);
 
 void board_serial_init(void);
 

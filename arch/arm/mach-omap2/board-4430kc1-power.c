@@ -85,7 +85,8 @@ static struct regulator_init_data sdp4430_vana = {
 
 static struct regulator_consumer_supply vcxio_supply[] = {
 	REGULATOR_SUPPLY("vdds_dsi", "omapdss_dss"),
-	REGULATOR_SUPPLY("vdds_dsi", "omapdss_dsi1"),
+	REGULATOR_SUPPLY("vdds_dsi", "omapdss_dsi.0"),
+	REGULATOR_SUPPLY("vdds_dsi", "omapdss_dsi.1"),
 };
 
 static struct regulator_init_data sdp4430_vcxio = {
@@ -232,40 +233,17 @@ static struct regulator_init_data sdp4430_v2v1 = {
 };
 #endif
 
-static struct regulator_init_data sdp4430_vcore1	= {
-	.constraints = {
-		.valid_ops_mask         = REGULATOR_CHANGE_STATUS,
-		.always_on              = true,
-		.state_mem = {
-			.disabled       = true,
-		},
-		.initial_state          = PM_SUSPEND_MEM,
-	},
-};
-
-static struct regulator_init_data sdp4430_vcore2	= {
-	.constraints = {
-		.valid_ops_mask         = REGULATOR_CHANGE_STATUS,
-		.always_on              = true,
-		.state_mem = {
-			.disabled       = true,
-		},
-		.initial_state          = PM_SUSPEND_MEM,
-	},
-};
 static struct twl4030_usb_data omap4_usbphy_data = {
+#if 0
 	.phy_init	= omap4430_phy_init,
 	.phy_exit	= omap4430_phy_exit,
 	.phy_power	= omap4430_phy_power,
 	.phy_set_clock	= omap4430_phy_set_clk,
 	.phy_suspend	= omap4430_phy_suspend,
+#endif
 };
 
-#if 0
 static struct twl4030_platform_data sdp4430_twldata = {
-	.irq_base	= TWL6030_IRQ_BASE,
-	.irq_end	= TWL6030_IRQ_END,
-
 	/* TWL6030 regulators at OMAP443X/4460 based SOMs */
 	.vmmc		= &sdp4430_vmmc,
 	.vpp		= &sdp4430_vpp,
@@ -280,22 +258,13 @@ static struct twl4030_platform_data sdp4430_twldata = {
 
 	/* TWL6030/6032 common resources */
 	.clk32kg	= &sdp4430_clk32kg,
-//	.clk32kaudio	= &sdp4430_clk32kaudio,
-
-//	.qcharger	= &kc1_charger_data,
-
-	/* SMPS */
-	.vdd1		= &sdp4430_vcore1,
-	.vdd2		= &sdp4430_vcore2,
-//	.v2v1		= &sdp4430_v2v1,
 
 	/* children */
 //	.bci            = &sdp4430_bci_data,
-	.usb		= &omap4_usbphy_data,
+//	.usb		= &omap4_usbphy_data,
 //	.codec          = &twl6040_codec,
 	.madc           = &sdp4430_gpadc_data,
 };
-#endif
 
 #if 0
 static struct twl6040_platform_data twl6040_data = {
@@ -306,24 +275,73 @@ static struct twl6040_platform_data twl6040_data = {
 };
 #endif
 
-static struct twl4030_platform_data sdp4430_twldata = {
-	/* Regulators */
-	.vusim		= &sdp4430_vusim,
-	.vaux1		= &sdp4430_vaux1,
+static struct regulator_consumer_supply sdp4430_vpmic_v2v1_supply[] = {
+	REGULATOR_SUPPLY("v2v1", "4-0006"),
 };
+
+static struct regulator_init_data sdp4430_v2v1smps = {
+	.constraints = {
+		.always_on		= true,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(sdp4430_vpmic_v2v1_supply),
+	.consumer_supplies	= sdp4430_vpmic_v2v1_supply,
+};
+
+static struct fixed_voltage_config sdp4430_v2v1_pdata = {
+	.supply_name	= "VPMIC-V2V1",
+	.microvolts	= 2100000,
+	.init_data	= &sdp4430_v2v1smps,
+	.gpio		= -EINVAL,
+};
+
+static struct platform_device sdp4430_v2v1 = {
+	.name		= "reg-fixed-voltage",
+	.id		= FIXED_REG_V2V1_ID,
+	.dev = {
+		.platform_data = &sdp4430_v2v1_pdata,
+	},
+};
+
+static struct regulator_consumer_supply sdp4430_vpmic_v1v8_supply[] = {
+	REGULATOR_SUPPLY("vio", "4-0006"),
+};
+
+static struct regulator_init_data sdp4430_v1v8smps = {
+	.constraints = {
+		.always_on		= true,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(sdp4430_vpmic_v1v8_supply),
+	.consumer_supplies	= sdp4430_vpmic_v1v8_supply,
+};
+
+static struct fixed_voltage_config sdp4430_v1v8_pdata = {
+	.supply_name	= "VPMIC-V1V8",
+	.microvolts	= 1800000,
+	.init_data	= &sdp4430_v1v8smps,
+	.gpio		= -EINVAL,
+};
+
+static struct platform_device sdp4430_v1v8 = {
+	.name		= "reg-fixed-voltage",
+	.id		= FIXED_REG_V1V8_ID,
+	.dev = {
+		.platform_data = &sdp4430_v1v8_pdata,
+	},
+};
+
+static struct platform_device *sdp4430_devices[] __initdata = {
+	&sdp4430_v1v8,
+	&sdp4430_v2v1,
+};
+
+void omap4_power_devices(void)
+{
+	platform_add_devices(sdp4430_devices, ARRAY_SIZE(sdp4430_devices));
+}
 
 void __init omap4_power_init(void)
 {
-	omap4_pmic_get_config(&sdp4430_twldata, TWL_COMMON_PDATA_USB,
-			TWL_COMMON_REGULATOR_VDAC |
-			TWL_COMMON_REGULATOR_VAUX2 |
-			TWL_COMMON_REGULATOR_VAUX3 |
-			TWL_COMMON_REGULATOR_VMMC |
-			TWL_COMMON_REGULATOR_VPP |
-			TWL_COMMON_REGULATOR_VANA |
-			TWL_COMMON_REGULATOR_VCXIO |
-			TWL_COMMON_REGULATOR_VUSB |
-			TWL_COMMON_REGULATOR_CLK32KG);
+	omap4_pmic_get_config(&sdp4430_twldata, TWL_COMMON_PDATA_USB, 0);
 	omap4_pmic_init("twl6030", &sdp4430_twldata, NULL, OMAP44XX_IRQ_SYS_2N);
 }
 

@@ -177,12 +177,6 @@ static void __init quanta_boardids(void)
 
 static struct platform_device __initdata *sdp4430_devices[] = {
 //      &sdp4430_aic3110,
-#if defined(CONFIG_SENSORS_OMAP_BANDGAP)
-//	&sdp4430_omap_bandgap_sensor,
-#endif
-#if defined(CONFIG_SENSORS_PMIC_THERMAL)
-//	&sdp4430_pmic_thermal_sensor,
-#endif
 };
 
 static struct omap_board_config_kernel __initdata sdp4430_config[] = {
@@ -738,6 +732,18 @@ static struct __initdata emif_custom_configs custom_configs = {
 	.lpmode = EMIF_LP_MODE_DISABLE
 };
 
+/*
+ * SDRAM memory data
+ */
+struct ddr_device_info lpddr2_elpida_4G_S4_x1_info __devinitdata = {
+	.type		= DDR_TYPE_LPDDR2_S4,
+	.density	= DDR_DENSITY_4Gb,
+	.io_width	= DDR_IO_WIDTH_32,
+	.cs1_used	= false,
+	.cal_resistors_per_cs = false,
+	.manufacturer	= "Elpida"
+};
+
 static void __init omap_kc1_init(void)
 {
 	int status;
@@ -746,25 +752,23 @@ static void __init omap_kc1_init(void)
 	if (omap_rev() == OMAP4430_REV_ES1_0)
 		package = OMAP_PACKAGE_CBL;
 
-	omap_emif_set_device_details(1, &lpddr2_elpida_2G_S4_x2_info,
-			lpddr2_elpida_2G_S4_timings,
-			ARRAY_SIZE(lpddr2_elpida_2G_S4_timings),
-			&lpddr2_elpida_S4_min_tck,
-			&custom_configs);
-
-#if 0
-	omap_emif_set_device_details(2, &lpddr2_elpida_2G_S4_x2_info,
-			lpddr2_elpida_2G_S4_timings,
-			ARRAY_SIZE(lpddr2_elpida_2G_S4_timings),
-			&lpddr2_elpida_S4_min_tck,
-			&custom_configs);
-#endif
-
 	quanta_boardids();
 	if (omap_rev() == OMAP4430_REV_ES1_0)
 		package = OMAP_PACKAGE_CBL;
 
 	omap4_mux_init(board_mux, NULL, package);
+
+	omap_emif_set_device_details(1, &lpddr2_elpida_4G_S4_x1_info,
+			lpddr2_elpida_2G_S4_timings,
+			ARRAY_SIZE(lpddr2_elpida_2G_S4_timings),
+			&lpddr2_elpida_S4_min_tck,
+			&custom_configs);
+
+	omap_emif_set_device_details(2, &lpddr2_elpida_4G_S4_x1_info,
+			lpddr2_elpida_2G_S4_timings,
+			ARRAY_SIZE(lpddr2_elpida_2G_S4_timings),
+			&lpddr2_elpida_S4_min_tck,
+			&custom_configs);
 
 	omap_board_config = sdp4430_config;
 	omap_board_config_size = ARRAY_SIZE(sdp4430_config);
@@ -772,6 +776,10 @@ static void __init omap_kc1_init(void)
 //	register_reboot_notifier(&kc1_reboot_notifier);
 
 	omap4_i2c_init();
+	omap4_twl6030_hsmmc_init(mmc);
+
+	omap4_power_devices();
+
 	enable_rtc_gpio();
 	omap_dmm_init();
 
@@ -785,7 +793,6 @@ static void __init omap_kc1_init(void)
 //	wake_lock_init(&uart_lock, WAKE_LOCK_SUSPEND, "uart_wake_lock");
 //	omap_serial_init();
 
-	omap4_twl6030_hsmmc_init(mmc);
 	gpio_request(42, "OMAP_GPIO_ADC");
 	gpio_direction_output(42, 0);
 
